@@ -2816,7 +2816,54 @@ dpkg-genchanges: info: binary-only upload (no source code included)
  dpkg-source --after-build .
 dpkg-buildpackage: info: binary-only upload (no source included)</code>
 </details>
+
 ---
+Пакеты собраны
 ```
-apt install libexpat-dev libgd-dev libgeoip-dev libpcre2-dev libperl-dev libssl-dev libxslt1-dev po-debconf debhelper-compat
+root@UbuntuTestVirt:~/custom-nginx/nginx-1.24.0# cd ..
+root@UbuntuTestVirt:~/custom-nginx# ll
+total 4776
+drwxr-xr-x  3 root root    4096 июн 30 00:59 ./
+drwx------  9 root root    4096 июн 29 22:43 ../
+-rw-r--r--  1 root root   21684 июн 30 00:59 libnginx-mod-http-geoip_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   36308 июн 30 00:59 libnginx-mod-http-geoip-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   25728 июн 30 00:59 libnginx-mod-http-image-filter_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   43638 июн 30 00:59 libnginx-mod-http-image-filter-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   34316 июн 30 00:59 libnginx-mod-http-perl_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root  107872 июн 30 00:59 libnginx-mod-http-perl-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   24128 июн 30 00:59 libnginx-mod-http-xslt-filter_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   53386 июн 30 00:59 libnginx-mod-http-xslt-filter-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   56964 июн 30 00:59 libnginx-mod-mail_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root  106134 июн 30 00:59 libnginx-mod-mail-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   84210 июн 30 00:59 libnginx-mod-stream_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root  174400 июн 30 00:59 libnginx-mod-stream-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root   20786 июн 30 00:59 libnginx-mod-stream-geoip_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   22332 июн 30 00:59 libnginx-mod-stream-geoip-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+drwxr-xr-x 11 root root    4096 июн 29 23:50 nginx-1.24.0/
+-rw-r--r--  1 root root   16788 июн 30 00:59 nginx_1.24.0-2ubuntu7-custom_amd64.buildinfo
+-rw-r--r--  1 root root    9819 июн 30 00:59 nginx_1.24.0-2ubuntu7-custom_amd64.changes
+-rw-r--r--  1 root root  963960 июн 30 00:59 nginx_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   81792 мар 31  2024 nginx_1.24.0-2ubuntu7.debian.tar.xz
+-rw-r--r--  1 root root    3646 мар 31  2024 nginx_1.24.0-2ubuntu7.dsc
+-rw-r--r--  1 root root 1112471 июн 28  2023 nginx_1.24.0.orig.tar.gz
+-rw-r--r--  1 root root   42922 июн 30 00:59 nginx-common_1.24.0-2ubuntu7-custom_all.deb
+-rw-r--r--  1 root root   16364 июн 30 00:59 nginx-core_1.24.0-2ubuntu7-custom_all.deb
+-rw-r--r--  1 root root 1571256 июн 30 00:59 nginx-dbgsym_1.24.0-2ubuntu7-custom_amd64.ddeb
+-rw-r--r--  1 root root  121788 июн 30 00:59 nginx-dev_1.24.0-2ubuntu7-custom_all.deb
+-rw-r--r--  1 root root   24376 июн 30 00:59 nginx-doc_1.24.0-2ubuntu7-custom_all.deb
+-rw-r--r--  1 root root   16612 июн 30 00:59 nginx-extras_1.24.0-2ubuntu7-custom_amd64.deb
+-rw-r--r--  1 root root   16428 июн 30 00:59 nginx-full_1.24.0-2ubuntu7-custom_all.deb
+-rw-r--r--  1 root root   16140 июн 30 00:59 nginx-light_1.24.0-2ubuntu7-custom_all.deb
+```
+---
+Устанавливам собраный пакет
+```
+root@UbuntuTestVirt:~/custom-nginx# dpkg -i nginx-common_*.deb nginx_*.deb
+root@UbuntuTestVirt:~/custom-nginx# apt-get install -f
+```
+---
+Проверяем наличие установленного модуля в пекете nginx
+```
+root@UbuntuTestVirt:~/custom-nginx# nginx -V 2>&1 | grep -o brotli
+brotli
 ```

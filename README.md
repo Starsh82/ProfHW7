@@ -1,5 +1,5 @@
 # ProfHW7
-Домашнее задание №7. Сборка RPM-пакета и создание репозитория.
+Домашнее задание №7. Сборка DEB-пакета и создание репозитория.
 
 ---
 Устанавливаем пакеты для сборки
@@ -90,7 +90,7 @@ Submodule path 'deps/brotli': checked out 'ed738e842d2fbdf2d6459e39267a633c4a9b2
 root@UbuntuTestVirt:~/custom-nginx/nginx-1.24.0/ngx_brotli/deps/brotli# apt install cmake
 ```
 ---
-Создаём папку out (я так и не понял для чего) и запускаем сборку brotli
+Создаём папку out и запускаем сборку brotli
 ```
 root@UbuntuTestVirt:~/custom-nginx/nginx-1.24.0/ngx_brotli/deps/brotli/out# cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_INSTALL_PREFIX=./installed ..
 -- The C compiler identification is GNU 13.3.0

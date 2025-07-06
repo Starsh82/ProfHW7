@@ -2855,15 +2855,4 @@ drwxr-xr-x 11 root root    4096 июн 29 23:50 nginx-1.24.0/
 -rw-r--r--  1 root root   16428 июн 30 00:59 nginx-full_1.24.0-2ubuntu7-custom_all.deb
 -rw-r--r--  1 root root   16140 июн 30 00:59 nginx-light_1.24.0-2ubuntu7-custom_all.deb
 ```
----
-Устанавливам собраный пакет
-```
-root@UbuntuTestVirt:~/custom-nginx# dpkg -i nginx-common_*.deb nginx_*.deb
-root@UbuntuTestVirt:~/custom-nginx# apt-get install -f
-```
----
-Проверяем наличие установленного модуля в пекете nginx
-```
-root@UbuntuTestVirt:~/custom-nginx# nginx -V 2>&1 | grep -o brotli
-brotli
-```
+

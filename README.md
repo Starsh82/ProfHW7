@@ -2859,73 +2859,94 @@ drwxr-xr-x 11 root root    4096 июн 29 23:50 nginx-1.24.0/
 **Создание локального репозитория**
 
 ---
-Создаём директории для репозитория и копируем собранные пакеты
+На "сервере" создан локальный репозитарий
 ```
-root@UbuntuTestVirt:/var/local/repo# mkdir -p /var/local/repo/{dists/noble/main/binary-amd64,pool/main}
-root@UbuntuTestVirt:/var/local/repo# cp /root/custom-nginx/*.deb pool/main/
-root@UbuntuTestVirt:/var/local/repo# cp /root/custom-nginx/*.ddeb pool/main/
-```
----
-Создаём файл Packages и Release
-```
-root@UbuntuTestVirt:/var/local/repo# dpkg-scanpackages --arch amd64 pool/main > dists/noble/main/binary-amd64/Packages
-dpkg-scanpackages: info: Wrote 15 entries to output Packages file.
-root@UbuntuTestVirt:/var/local/repo# gzip -k dists/noble/main/binary-amd64/Packages
+root@UbuntuTestVirt:/etc/nginx# cd /var/local/repo/
+root@UbuntuTestVirt:/var/local/repo# ll
+total 20
+drwxr-sr-x 5 www-data www-data 4096 июл  6 21:39 ./
+drwxrwsr-x 3 root     staff    4096 июл  6 20:55 ../
+drwxr-sr-x 2 www-data www-data 4096 июл  6 21:39 custom-nginx/
+drwxr-sr-x 3 www-data www-data 4096 июл  6 21:38 dists/
+drwxr-sr-x 3 www-data www-data 4096 июл  6 21:38 pool/
 root@UbuntuTestVirt:/var/local/repo# apt-ftparchive release dists/noble/ > dists/noble/Release
+root@UbuntuTestVirt:/var/local/repo# chown -R www-data:www-data /var/local/repo
+root@UbuntuTestVirt:/var/local/repo# sudo chmod -R 755 /var/local/repo/
 ```
 ---
-Создаём подпись и назначаем права на папку репозитория
+Настройка nginx
 ```
-root@UbuntuTestVirt:/var/local/repo# gpg --armor --detach-sign -o dists/noble/Release.gpg dists/noble/Release
-gpg: directory '/root/.gnupg' created
-gpg: keybox '/root/.gnupg/pubring.kbx' created
-gpg: no default secret key: No secret key
-gpg: signing failed: No secret key
-root@UbuntuTestVirt:/var/local/repo# gpg --clearsign -o dists/noble/InRelease dists/noble/Release
-gpg: no default secret key: No secret key
-gpg: dists/noble/Release: clear-sign failed: No secret key
-root@UbuntuTestVirt:/var/local/repo# sudo chown -R _apt:root /var/local/repo
-root@UbuntuTestVirt:/var/local/repo# sudo chmod -R 755 /var/local/repo
+root@UbuntuTestVirt:/etc/nginx/sites-enabled# nano repo
+      server {
+          listen 80;
+          server_name 192.168.0.160;
+      
+          # Отключаем корневой доступ
+          location / {
+              return 404;
+          }
+      
+          # Настройка репозитория
+          location /repo {
+              alias /var/local/repo;
+              autoindex on;
+              try_files $uri $uri/ =404;
+      
+              # Дополнительные настройки для apt-репозитория
+              location ~ /repo/dists/.*/Release {
+                  add_header Content-Type text/plain;
+              }
+      
+              location ~ /repo/dists/.*/Packages {
+                  add_header Content-Type text/plain;
+              }
+          }
+      }
+root@UbuntuTestVirt: systemctl restart nginx
 ```
 ---
-Создаём локальный repo лист
+Настройка подключение к репозиторию на "клиенте"
 ```
-root@UbuntuTestVirt:/var/local/repo# nano /etc/apt/sources.list.d/local-repo.list
-```
-```
-deb [trusted=yes] file:/var/local/repo noble main
+root@ubu22serv:/etc/apt/sources.list.d# nano local-repo.sources
+      Types: deb
+      URIs: http://192.168.0.160/repo
+      Suites: noble
+      Components: main
+      Trusted: yes
 ```
 ---
-Устанавливаем nginx и проверяем его кастомность
+Установка кастомного nginx
 ```
-root@UbuntuTestVirt:/var/local/repo# apt update
-Пол:1 file:/var/local/repo noble InRelease
-Игн:1 file:/var/local/repo noble InRelease
-Пол:2 file:/var/local/repo noble Release [1 348 B]
-Пол:2 file:/var/local/repo noble Release [1 348 B]
-Пол:3 file:/var/local/repo noble Release.gpg
-Игн:3 file:/var/local/repo noble Release.gpg
-Сущ:4 http://ru.archive.ubuntu.com/ubuntu noble InRelease
-Сущ:5 http://ru.archive.ubuntu.com/ubuntu noble-updates InRelease
-Сущ:6 http://ru.archive.ubuntu.com/ubuntu noble-backports InRelease
+root@ubu22serv:/etc/apt/sources.list.d# apt update
+Игн:1 http://192.168.0.160/repo noble InRelease
+Пол:2 http://192.168.0.160/repo noble Release [1 348 B]
+Игн:3 http://192.168.0.160/repo noble Release.gpg
+Пол:4 http://192.168.0.160/repo noble/main amd64 Packages [4 632 B]
+Сущ:5 http://ru.archive.ubuntu.com/ubuntu noble InRelease
+Сущ:6 http://ru.archive.ubuntu.com/ubuntu noble-updates InRelease
+Сущ:7 http://ru.archive.ubuntu.com/ubuntu noble-backports InRelease
+Сущ:8 http://security.ubuntu.com/ubuntu noble-security InRelease
+Получено 5 980 B за 1с (5 567 B/s)
 Чтение списков пакетов… Готово
 Построение дерева зависимостей… Готово
 Чтение информации о состоянии… Готово
 Может быть обновлён 1 пакет. Запустите «apt list --upgradable» для показа.
-W: Противоречивый выпуск: file:/var/local/repo noble Release (ожидался noble, но получен )
-root@UbuntuTestVirt:/var/local/repo# apt upgrade -y
+W: Противоречивый выпуск: http://192.168.0.160/repo noble Release (ожидался noble, но получен
+)
+N: Missing Signed-By in the sources.list(5) entry for 'http://192.168.0.160/repo'
+```
+```
+root@ubu22serv:/etc/apt/sources.list.d# apt install nginx
 Чтение списков пакетов… Готово
-Построение дерева зависимостей… Готово
-Чтение информации о состоянии… Готово
-Расчёт обновлений… Готово
-The following upgrades have been deferred due to phasing:
-  ubuntu-drivers-common
-Обновлено 0 пакетов, установлено 0 новых пакетов, для удаления отмечено 0 пакетов, и 1 пакетов не обновлено.
 
-root@UbuntuTestVirt:/var/local/repo# apt install nginx
-Чтение списков пакетов… Готово
+Ход выполнения: [ 89%] [##########################################################........]
 Построение дерева зависимостей… Готово
 Чтение информации о состоянии… Готово
+Следующие пакеты устанавливались автоматически и больше не требуются:
+  linux-headers-6.8.0-60 linux-headers-6.8.0-60-generic linux-image-6.8.0-60-generic
+  linux-modules-6.8.0-60-generic linux-modules-extra-6.8.0-60-generic linux-tools-6.8.0-60
+  linux-tools-6.8.0-60-generic
+Для их удаления используйте «apt autoremove».
 Будут установлены следующие дополнительные пакеты:
   nginx-common
 Предлагаемые пакеты:
@@ -2933,14 +2954,15 @@ root@UbuntuTestVirt:/var/local/repo# apt install nginx
 Следующие НОВЫЕ пакеты будут установлены:
   nginx nginx-common
 Обновлено 0 пакетов, установлено 2 новых пакетов, для удаления отмечено 0 пакетов, и 1 пакетов не обновлено.
-Необходимо скачать 0 B/1 007 kB архивов.
+Необходимо скачать 1 007 kB архивов.
 После данной операции объём занятого дискового пространства возрастёт на 2 688 kB.
 Хотите продолжить? [Д/н] y
-Пол:1 file:/var/local/repo noble/main amd64 nginx-common all 1.24.0-2ubuntu7-custom [42,9 kB]
-Пол:2 file:/var/local/repo noble/main amd64 nginx amd64 1.24.0-2ubuntu7-custom [964 kB]
+Пол:1 http://192.168.0.160/repo noble/main amd64 nginx-common all 1.24.0-2ubuntu7-custom [42,9 kB]
+Пол:2 http://192.168.0.160/repo noble/main amd64 nginx amd64 1.24.0-2ubuntu7-custom [964 kB]
+Получено 1 007 kB за 0с (6 145 kB/s)
 Предварительная настройка пакетов …
 Выбор ранее не выбранного пакета nginx-common.
-(Чтение базы данных … на данный момент установлено 134650 файлов и каталогов.)
+(Чтение базы данных … на данный момент установлено 163089 файлов и каталогов.)
 Подготовка к распаковке …/nginx-common_1.24.0-2ubuntu7-custom_all.deb …
 Распаковывается nginx-common (1.24.0-2ubuntu7-custom) …
 Выбор ранее не выбранного пакета nginx.
@@ -2952,43 +2974,33 @@ Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /u
 Обрабатываются триггеры для ufw (0.36.2-6) …
 Обрабатываются триггеры для man-db (2.12.0-4build2) …
 Scanning processes...
+Scanning candidates...
 Scanning linux images...
 
 Pending kernel upgrade!
 Running kernel version:
-  6.8.0-62-generic
+  6.8.0-63-generic
 Diagnostics:
-  The currently running kernel version is not the expected kernel version 6.8.0-63-generic.
+  The currently running kernel version is not the expected kernel version 6.8.0-64-generic.
 
-Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+Restarting the system to load the new kernel will not be handled automatically, so you should
+consider rebooting.
 
-No services need to be restarted.
+Restarting services...
+
+Service restarts being deferred:
+ /etc/needrestart/restart.d/dbus.service
+ systemctl restart getty@tty1.service
+ systemctl restart systemd-logind.service
+ systemctl restart unattended-upgrades.service
 
 No containers need to be restarted.
 
-No user sessions are running outdated binaries.
+User sessions running outdated binaries:
+ starsh @ session #1: sshd[870,1056]
+ starsh @ user manager service: systemd[897]
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
-
-root@UbuntuTestVirt:/var/local/repo# nginx -V 2>&1 | grep -o brotli
+root@ubu22serv:/etc/apt/sources.list.d# nginx -V 2>&1 | grep -o brotli
 brotli
-
-root@UbuntuTestVirt:/var/local/repo# systemctl status nginx.service
-● nginx.service - A high performance web server and a reverse proxy server
-     Loaded: loaded (;;file://UbuntuTestVirt/usr/lib/systemd/system/nginx.service/usr/lib/systemd/system/nginx.service;;; enabled; preset: enabled)
-     Active: active (running) since Sun 2025-07-06 22:33:28 +04; 57min ago
-       Docs: ;;man:nginx(8)man:nginx(8);;
-    Process: 50220 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
-    Process: 50221 ExecStart=/usr/sbin/nginx -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
-   Main PID: 50223 (nginx)
-      Tasks: 3 (limit: 2267)
-     Memory: 2.4M (peak: 2.6M)
-        CPU: 21ms
-     CGroup: /system.slice/nginx.service
-             ├─50223 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
-             ├─50224 "nginx: worker process"
-             └─50225 "nginx: worker process"
-
-июл 06 22:33:28 UbuntuTestVirt systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
-июл 06 22:33:28 UbuntuTestVirt systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
 ```

@@ -10,3 +10,141 @@ root@UbuntuTestVirt:~/custom-nginx# apt-get install -f
 root@UbuntuTestVirt:~/custom-nginx# nginx -V 2>&1 | grep -o brotli
 brotli
 ```
+
+
+
+
+---
+Создаём директории для репозитория и копируем собранные пакеты
+```
+root@UbuntuTestVirt:/var/local/repo# mkdir -p /var/local/repo/{dists/noble/main/binary-amd64,pool/main}
+root@UbuntuTestVirt:/var/local/repo# cp /root/custom-nginx/*.deb pool/main/
+root@UbuntuTestVirt:/var/local/repo# cp /root/custom-nginx/*.ddeb pool/main/
+```
+---
+Создаём файл Packages и Release
+```
+root@UbuntuTestVirt:/var/local/repo# dpkg-scanpackages --arch amd64 pool/main > dists/noble/main/binary-amd64/Packages
+dpkg-scanpackages: info: Wrote 15 entries to output Packages file.
+root@UbuntuTestVirt:/var/local/repo# gzip -k dists/noble/main/binary-amd64/Packages
+root@UbuntuTestVirt:/var/local/repo# apt-ftparchive release dists/noble/ > dists/noble/Release
+```
+---
+Создаём подпись и назначаем права на папку репозитория
+```
+root@UbuntuTestVirt:/var/local/repo# gpg --armor --detach-sign -o dists/noble/Release.gpg dists/noble/Release
+gpg: directory '/root/.gnupg' created
+gpg: keybox '/root/.gnupg/pubring.kbx' created
+gpg: no default secret key: No secret key
+gpg: signing failed: No secret key
+root@UbuntuTestVirt:/var/local/repo# gpg --clearsign -o dists/noble/InRelease dists/noble/Release
+gpg: no default secret key: No secret key
+gpg: dists/noble/Release: clear-sign failed: No secret key
+root@UbuntuTestVirt:/var/local/repo# sudo chown -R _apt:root /var/local/repo
+root@UbuntuTestVirt:/var/local/repo# sudo chmod -R 755 /var/local/repo
+```
+---
+Создаём локальный repo лист
+```
+root@UbuntuTestVirt:/var/local/repo# nano /etc/apt/sources.list.d/local-repo.list
+```
+```
+deb [trusted=yes] file:/var/local/repo noble main
+```
+---
+Устанавливаем nginx и проверяем его кастомность
+```
+root@UbuntuTestVirt:/var/local/repo# apt update
+Пол:1 file:/var/local/repo noble InRelease
+Игн:1 file:/var/local/repo noble InRelease
+Пол:2 file:/var/local/repo noble Release [1 348 B]
+Пол:2 file:/var/local/repo noble Release [1 348 B]
+Пол:3 file:/var/local/repo noble Release.gpg
+Игн:3 file:/var/local/repo noble Release.gpg
+Сущ:4 http://ru.archive.ubuntu.com/ubuntu noble InRelease
+Сущ:5 http://ru.archive.ubuntu.com/ubuntu noble-updates InRelease
+Сущ:6 http://ru.archive.ubuntu.com/ubuntu noble-backports InRelease
+Чтение списков пакетов… Готово
+Построение дерева зависимостей… Готово
+Чтение информации о состоянии… Готово
+Может быть обновлён 1 пакет. Запустите «apt list --upgradable» для показа.
+W: Противоречивый выпуск: file:/var/local/repo noble Release (ожидался noble, но получен )
+root@UbuntuTestVirt:/var/local/repo# apt upgrade -y
+Чтение списков пакетов… Готово
+Построение дерева зависимостей… Готово
+Чтение информации о состоянии… Готово
+Расчёт обновлений… Готово
+The following upgrades have been deferred due to phasing:
+  ubuntu-drivers-common
+Обновлено 0 пакетов, установлено 0 новых пакетов, для удаления отмечено 0 пакетов, и 1 пакетов не обновлено.
+
+root@UbuntuTestVirt:/var/local/repo# apt install nginx
+Чтение списков пакетов… Готово
+Построение дерева зависимостей… Готово
+Чтение информации о состоянии… Готово
+Будут установлены следующие дополнительные пакеты:
+  nginx-common
+Предлагаемые пакеты:
+  fcgiwrap nginx-doc ssl-cert
+Следующие НОВЫЕ пакеты будут установлены:
+  nginx nginx-common
+Обновлено 0 пакетов, установлено 2 новых пакетов, для удаления отмечено 0 пакетов, и 1 пакетов не обновлено.
+Необходимо скачать 0 B/1 007 kB архивов.
+После данной операции объём занятого дискового пространства возрастёт на 2 688 kB.
+Хотите продолжить? [Д/н] y
+Пол:1 file:/var/local/repo noble/main amd64 nginx-common all 1.24.0-2ubuntu7-custom [42,9 kB]
+Пол:2 file:/var/local/repo noble/main amd64 nginx amd64 1.24.0-2ubuntu7-custom [964 kB]
+Предварительная настройка пакетов …
+Выбор ранее не выбранного пакета nginx-common.
+(Чтение базы данных … на данный момент установлено 134650 файлов и каталогов.)
+Подготовка к распаковке …/nginx-common_1.24.0-2ubuntu7-custom_all.deb …
+Распаковывается nginx-common (1.24.0-2ubuntu7-custom) …
+Выбор ранее не выбранного пакета nginx.
+Подготовка к распаковке …/nginx_1.24.0-2ubuntu7-custom_amd64.deb …
+Распаковывается nginx (1.24.0-2ubuntu7-custom) …
+Настраивается пакет nginx (1.24.0-2ubuntu7-custom) …
+Настраивается пакет nginx-common (1.24.0-2ubuntu7-custom) …
+Created symlink /etc/systemd/system/multi-user.target.wants/nginx.service → /usr/lib/systemd/system/nginx.service.
+Обрабатываются триггеры для ufw (0.36.2-6) …
+Обрабатываются триггеры для man-db (2.12.0-4build2) …
+Scanning processes...
+Scanning linux images...
+
+Pending kernel upgrade!
+Running kernel version:
+  6.8.0-62-generic
+Diagnostics:
+  The currently running kernel version is not the expected kernel version 6.8.0-63-generic.
+
+Restarting the system to load the new kernel will not be handled automatically, so you should consider rebooting.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+root@UbuntuTestVirt:/var/local/repo# nginx -V 2>&1 | grep -o brotli
+brotli
+
+root@UbuntuTestVirt:/var/local/repo# systemctl status nginx.service
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (;;file://UbuntuTestVirt/usr/lib/systemd/system/nginx.service/usr/lib/systemd/system/nginx.service;;; enabled; preset: enabled)
+     Active: active (running) since Sun 2025-07-06 22:33:28 +04; 57min ago
+       Docs: ;;man:nginx(8)man:nginx(8);;
+    Process: 50220 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+    Process: 50221 ExecStart=/usr/sbin/nginx -g daemon on; master_process on; (code=exited, status=0/SUCCESS)
+   Main PID: 50223 (nginx)
+      Tasks: 3 (limit: 2267)
+     Memory: 2.4M (peak: 2.6M)
+        CPU: 21ms
+     CGroup: /system.slice/nginx.service
+             ├─50223 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"
+             ├─50224 "nginx: worker process"
+             └─50225 "nginx: worker process"
+
+июл 06 22:33:28 UbuntuTestVirt systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+июл 06 22:33:28 UbuntuTestVirt systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+```
